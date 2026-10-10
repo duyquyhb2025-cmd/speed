@@ -121,7 +121,7 @@ refresh()
 
 speedBox.FocusLost:Connect(function()
 	local n = tonumber(speedBox.Text)
-	if n then CFG.Speed = math.clamp(n, 0, 120) end
+	if n then CFG.Speed = math.clamp(n, 0, 1000) end
 	speedBox.Text = tostring(CFG.Speed)
 	apply()
 end)
