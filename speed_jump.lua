@@ -3,6 +3,7 @@ local CFG = {
 	Speed = 32,    -- mặc định của game là 16
 	Jump = 60,     -- mặc định của game là 50
 	Enabled = true,
+	AntiVoid = true, -- kéo về vị trí an toàn nếu rơi khỏi map
 }
 local DEFAULT = {Speed = 16, Jump = 50}
 -- =====================================================
@@ -49,6 +50,23 @@ end
 if lp.Character then task.spawn(bind, lp.Character) end
 table.insert(guiConns, lp.CharacterAdded:Connect(bind))
 
+-- ===== Chống rơi khỏi map (anti-void) =====
+local RunService = game:GetService("RunService")
+local lastSafe
+table.insert(guiConns, RunService.Heartbeat:Connect(function()
+	if not CFG.AntiVoid then return end
+	local char = lp.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	if not root or not humanoid or humanoid.Health <= 0 then return end
+	local floor = workspace.FallenPartsDestroyHeight
+	if humanoid.FloorMaterial ~= Enum.Material.Air and root.Position.Y > floor + 100 then
+		lastSafe = root.CFrame
+	elseif lastSafe and root.Position.Y < floor + 40 then
+		root.AssemblyLinearVelocity = Vector3.zero
+		root.CFrame = lastSafe + Vector3.new(0, 4, 0)
+	end
+end))
+
 -- ===== GUI nhỏ =====
 local gui = Instance.new("ScreenGui")
 gui.Name = "SpeedJumpGui"
@@ -66,7 +84,7 @@ local function make(class, props, parent)
 end
 
 local F = make("Frame", {
-	Size = UDim2.fromOffset(210, 150),
+	Size = UDim2.fromOffset(210, 190),
 	Position = UDim2.new(0, 20, 0.4, 0),
 	BackgroundColor3 = Color3.fromRGB(15, 12, 25),
 	Active = true,
@@ -113,9 +131,17 @@ local T = make("TextButton", {
 }, F)
 make("UICorner", {CornerRadius = UDim.new(0, 8)}, T)
 
+local AV = make("TextButton", {
+	Size = UDim2.new(1, -20, 0, 30), Position = UDim2.new(0, 10, 0, 148),
+	Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = Color3.new(1, 1, 1),
+}, F)
+make("UICorner", {CornerRadius = UDim.new(0, 8)}, AV)
+
 local function refresh()
 	T.Text = CFG.Enabled and "ON" or "OFF"
 	T.BackgroundColor3 = CFG.Enabled and Color3.fromRGB(0, 180, 120) or Color3.fromRGB(60, 50, 80)
+	AV.Text = "ANTI-VOID: " .. (CFG.AntiVoid and "ON" or "OFF")
+	AV.BackgroundColor3 = CFG.AntiVoid and Color3.fromRGB(0, 140, 255) or Color3.fromRGB(60, 50, 80)
 end
 refresh()
 
@@ -135,6 +161,11 @@ T.MouseButton1Click:Connect(function()
 	CFG.Enabled = not CFG.Enabled
 	refresh()
 	apply()
+end)
+
+AV.MouseButton1Click:Connect(function()
+	CFG.AntiVoid = not CFG.AntiVoid
+	refresh()
 end)
 
 local function stop()
